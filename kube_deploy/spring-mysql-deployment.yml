@@ -1,0 +1,81 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-mysql-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-mysql
+  template:
+    metadata:
+      labels:
+        app: spring-mysql
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox
+          command: ['sh', '-c', 'until nc -z localhost 3306; do echo waiting for mysql; sleep 2; done']
+      containers:
+        - name: spring-app
+          image: sakit333/spring-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://localhost:3306/myapplication?createDatabaseIfNotExist=true
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: 1234
+            - name: SPRING_APPLICATION_NAME
+              value: Spring_sak
+            - name: SERVER_PORT
+              value: "8081"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: update
+            - name: SPRING_JPA_SHOW_SQL
+              value: "true"
+            - name: SPRING_SERVLET_MULTIPART_ENABLED
+              value: "true"
+            - name: SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE
+              value: 5MB
+            - name: SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE
+              value: 5MB
+
+        - name: mysql
+          image: mysql:8.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: 1234
+            - name: MYSQL_DATABASE
+              value: myapplication
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+
+      volumes:
+        - name: mysql-data
+          hostPath:
+            path: /data/mysql
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-app-service
+spec:
+  selector:
+    app: spring-mysql
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8081
+      nodePort: 30070 
+  type: LoadBalancer  
