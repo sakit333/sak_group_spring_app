@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: myapplication
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  spring-app:
+    image: sakit333/spring-app:latest
+    container_name: spring-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/myapplication?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_APPLICATION_NAME: Spring_sak
+      SERVER_PORT: "8081"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_SERVLET_MULTIPART_ENABLED: "true"
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 5MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 5MB
+    ports:
+      - "8081:8081"
+    restart: on-failure
